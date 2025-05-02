@@ -8,10 +8,50 @@
 # Target Sources
 ################################################################################
 
-file(GLOB experimental_gen_ai_cpp_source_files_cpu
+function(glob_files out_var)
+  set(options)
+  set(oneValueArgs EXCLUDE_REGEX)
+  set(multiValueArgs PATTERNS)  # List of glob patterns
+  cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+  # Set default exclude regex to match nothing
+  if(NOT ARG_EXCLUDE_REGEX)
+    set(ARG_EXCLUDE_REGEX "^$")
+  endif()
+
+  set(all_matched_files)
+
+  # Loop over each pattern and glob files
+  foreach(pattern IN LISTS ARG_PATTERNS)
+    file(GLOB matched_files "${pattern}")
+    list(APPEND all_matched_files ${matched_files})
+  endforeach()
+
+  # Remove duplicates and apply exclusion filter
+  if(all_matched_files)
+    list(REMOVE_DUPLICATES all_matched_files)
+    list(FILTER all_matched_files EXCLUDE REGEX "${ARG_EXCLUDE_REGEX}")
+  endif()
+
+  # Set output variable in parent scope
+  set(${out_var} ${all_matched_files} PARENT_SCOPE)
+endfunction()
+
+function(glob_files_nohip out_var)
+  set(args ${ARGN})  # All arguments except function name
+
+  glob_files(
+    tmp_list
+    PATTERNS ${ARGN}
+    EXCLUDE_REGEX  ".*_hip\\.cpp$")
+
+    set(${out_var} ${tmp_list} PARENT_SCOPE)
+endfunction()
+
+glob_files_nohip(experimental_gen_ai_cpp_source_files_cpu
   src/quantize/*.cpp)
 
-file(GLOB experimental_gen_ai_cpp_source_files_gpu
+  glob_files_nohip(experimental_gen_ai_cpp_source_files_gpu
   src/quantize/*.cu)
 
 if(FBGEMM_BUILD_VARIANT STREQUAL BUILD_VARIANT_CUDA)
@@ -31,8 +71,16 @@ if(FBGEMM_BUILD_VARIANT STREQUAL BUILD_VARIANT_CUDA)
     src/kv_cache/*.cu
     src/moe/*.cu)
 
-  list(APPEND experimental_gen_ai_cpp_source_files_cpu ${tmp_list_cpu})
-  list(APPEND experimental_gen_ai_cpp_source_files_gpu ${tmp_list_gpu})
+  if(CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL 12.0)
+    file(GLOB tmp_list_cpu2
+      src/kv_cache/*.cpp)
+
+    file(GLOB tmp_list_gpu2
+      src/kv_cache/*.cu)
+  endif()
+
+  list(APPEND experimental_gen_ai_cpp_source_files_cpu ${tmp_list_cpu} ${tmp_list_cpu2})
+  list(APPEND experimental_gen_ai_cpp_source_files_gpu ${tmp_list_gpu} ${tmp_list_gpu2})
 endif()
 
 # Set the source file for FB only CPP
