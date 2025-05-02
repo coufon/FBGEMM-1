@@ -64,6 +64,7 @@ jobs:
       BUILD_ENV: build_binary
       BUILD_TARGET: ${{ matrix.build-target }}
       BUILD_VARIANT: rocm
+      BUILD_ROCM_VERSION: ${{ matrix.rocm-version }}
     strategy:
       fail-fast: false
       matrix:
@@ -148,6 +149,7 @@ jobs:
       BUILD_ENV: build_binary
       BUILD_TARGET: ${{ matrix.build-target }}
       BUILD_VARIANT: rocm
+      BUILD_ROCM_VERSION: ${{ matrix.rocm-version }}
       ENFORCE_ROCM_DEVICE: 1
     strategy:
       fail-fast: false
